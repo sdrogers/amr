@@ -30,10 +30,11 @@ class SimpleFilter(Filter):
         new_kmer_pos = 0
         new_data_list = []
         for row,col,count in data_list:
-            if kmer in retain:
                 kmer = reverse_kmer_idx[row]
-                if not kmer in new_kmer_idx:
-                    new_kmer_idx[kmer] = new_kmer_pos
-                    new_kmer_pos += 1
+                if kmer in remain:
+                    if not kmer in new_kmer_idx:
+                        new_kmer_idx[kmer] = new_kmer_pos
+                        new_kmer_pos += 1
 
-                    row = new_kmer_idx[kmer]
+                        new_row = new_kmer_idx[kmer]
+                        new_data_list.append((new_row,col,count))
