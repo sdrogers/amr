@@ -16,10 +16,14 @@ class DSKProcess(object):
         data_list = []
         for i,filename in enumerate(self.filename_list):
             print(filename, "({} of {})".format(i,len(self.filename_list)))
-            try: # fix for the test data - what format will filenames be in??
-                strain_name = Path(filename).stem.split('_')[1]
-            except:
-                strain_name = filename
+            # Just use the filename at this point....
+
+            # try: # fix for the test data - what format will filenames be in??
+            #     strain_name = Path(filename).stem.split('_')[1]
+            # except:
+            #     strain_name = filename
+            strain_name = filename
+            
             with open(filename,'r') as f:
                 strain_idx[strain_name] = strain_pos
                 strain_pos += 1

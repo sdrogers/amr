@@ -16,7 +16,7 @@ class SimpleFilter(Filter):
 
     def process(self,data_list,kmer_idx,strain_idx):
         
-
+        print("Filtering >={} and <={}".format(self.min_presence,self.max_presence))
         # create a reverse idx as positions are stored in data_list
         reverse_kmer_idx = {v:k for k,v in kmer_idx.items()}
 
