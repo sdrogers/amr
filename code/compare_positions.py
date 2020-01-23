@@ -76,9 +76,12 @@ def check_overlap_seq(start, stop, pos_list, margin):
 def compare_files(file_1, file_2, margin):
     # Use the smaller file as reference and loop through the larger one
     if file_len(file_1) < file_len(file_2):
+        # Keep output order same as input
+        reverse_order = True
         base_file = file_1
         check_file = file_2
     else:
+        reverse_order = False
         base_file = file_2
         check_file = file_1
 
@@ -88,7 +91,10 @@ def compare_files(file_1, file_2, margin):
         if strain_id in reference_data:
             if contig_id in reference_data[strain_id]:
                 for start_pos, stop_pos, obj_id in check_overlap_seq(start, stop, reference_data[strain_id][contig_id], margin):
-                    output_fields = (strain_id, contig_id, obj_id, start_pos, stop_pos, object_id, start, stop)
+                    if reverse_order:
+                        output_fields = (strain_id, contig_id, obj_id, start_pos, stop_pos, object_id, start, stop)
+                    else:
+                        output_fields = (strain_id, contig_id, object_id, start, stop, obj_id, start_pos, stop_pos)
                     output = '\t'.join([str(x) for x in output_fields])
                     print(output)
 
