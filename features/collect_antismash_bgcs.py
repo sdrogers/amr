@@ -1,4 +1,4 @@
-
+import argparse
 import os
 from Bio import SeqIO
 
@@ -33,5 +33,9 @@ def collect_antismash_bgcs(path):
 
 
 if __name__ == '__main__':
-    path = '/srv/data/tuberculosis/antismash'
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path')
+    args = parser.parse_args()
+
+    path = args.path
     collect_antismash_bgcs(path)
