@@ -22,14 +22,16 @@ def randomSequences (n, stringLength = 10):
         seqs.append(randomString(stringLength))
     return seqs
 
-kmer_list = randomSequences (10 ,stringLength = 7) 
-
+#kmer_list = randomSequences (10 ,stringLength = 7) 
+kmer_list =[]
+kmer_df = pd.read_csv ('prediction.csv')
+for i,row in kmer_df.iterrows():
+    if row.score>0:
+        kmer_list.append(row.kmer)
+print(len(kmer_list))
 
 fasta_folder = '../data/fasta/'
-all_filenames = glob.glob(os.path.join(fasta_folder,'*.fna'))
-
-
-    
+all_filenames = glob.glob(os.path.join(fasta_folder,'*.fna'))    
 ab = 'pyrazinamide'
 mdata = pd.read_csv(f'../TBmetadata/{ab}.csv')
 TB = (list(mdata[mdata.columns[0]]))
@@ -39,7 +41,7 @@ file_list = [f for f in all_filenames if Path(f).stem.split('_')[1] in TB]
 print(f"number of kmers {len(kmer_list)}, number of files {len(file_list)}")
     
     
-k = FindKmers(file_list,kmer_list)
+k = FindKmers(file_list[:5],kmer_list[:10])
 position_list, kmer_idx, file_idx = k.process()
     
     

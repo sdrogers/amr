@@ -30,17 +30,20 @@ class FindKmers(object):
         file_index = {f:i for (i,f) in enumerate(self.filename_list)}
                  
         for filename,file_pos in (file_index.items()):
-            seq = '' 
+            n_records = 0
+             
             with open(filename, 'rt') as handle:
-                for record in SeqIO.parse(handle, "fasta"):                   
-                    seq += str(record.seq)
-            #print(file_pos, len(seq))
+                for record in SeqIO.parse(handle, "fasta"):
+                    contig_id =record.description.split()[0]
+                    n_records += 1
+                    seq =record.seq
+                    print('****',file_pos, filename,contig_id, len(seq),n_records)
                 
-            for kmer, kmer_id in self.kmer_index.items():
-                for pos in (list(self.find_all(seq,kmer))):   
-                    data_list.append((file_pos,pos,kmer_id))
-                for pos in (list(self.find_all(seq,self.compliment(kmer)))):
-                    data_list.append((file_pos,pos,-kmer_id)) 
+                    for kmer, kmer_id in self.kmer_index.items():
+                        for pos in (list(self.find_all(seq,kmer))):   
+                            data_list.append((file_pos,contig_id,pos,kmer_id))
+                        for pos in (list(self.find_all(seq,self.compliment(kmer)))):
+                            data_list.append((file_pos,contig_id,pos,-kmer_id)) 
         
         return data_list, self.kmer_index ,file_index
                                   
@@ -51,3 +54,5 @@ if __name__ == '__main__':
     position_list = k.process()
     print(position_list[:10])      
         
+        
+####
