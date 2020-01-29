@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 # coding: utf-8
 
+from statsmodels.stats import multitest
 import argparse
 import scipy.stats
 
 
-def hg_test(tagged_strains, sampled_strains, strain_count):
-    tagged_strains = set(tagged_strains)
-    sampled_strains = set(sampled_strains)
+def hg_test(tagged_objects, sampled_objects, object_count):
+    tagged_objects = set(tagged_objects)
+    sampled_objects = set(sampled_objects)
 
-    intersection = len(tagged_strains.intersection(sampled_strains))
-    total_tagged = len(tagged_strains)
-    sample_size = len(sampled_strains)
+    intersection = len(tagged_objects.intersection(sampled_objects))
+    total_tagged = len(tagged_objects)
+    sample_size = len(sampled_objects)
 
-    M = strain_count
+    M = object_count
     n = total_tagged
     N = sample_size
     k = intersection
@@ -21,7 +22,7 @@ def hg_test(tagged_strains, sampled_strains, strain_count):
     return scipy.stats.hypergeom.sf(k, M, n, N, 1)
 
 
-def process_family_file(filename, associations, contig_list):
+def process_family_file(filename, associations, contig_list, adjust=True):
     gcfs = {}
     all_bgcs = set([])
 
@@ -40,15 +41,60 @@ def process_family_file(filename, associations, contig_list):
 
     total_bgc_count = len(all_bgcs)
 
-    for kmer_identifier, associated_bgcs in associations.items():
-        strain_id, contig_id, kmer_id = kmer_identifier
-        kmer_bgc_ids = ["{}.cluster{:03}".format(contig_id, int(x)) for x in associated_bgcs]
+    id_list = []
+    pvalues = []
+    for kmer_id, associated_bgcs in associations.items():
+        # strain_id, contig_id, kmer_id = kmer_identifier
+        kmer_bgc_ids = ["{}.cluster{:03}".format(cont, int(x)) for strain, cont, x in associated_bgcs]
 
         for gcf_id, gcf_bgc_ids in gcfs.items():
             prob = hg_test(kmer_bgc_ids, gcf_bgc_ids, total_bgc_count)
 
-            yield kmer_id, gcf_id, prob
+            id_list.append((kmer_id, gcf_id))
+            pvalues.append(prob)
 
+    if adjust:
+        res = multitest.multipletests(pvalues)
+        reject = res[0]
+        pvalues = res[1]
+
+    for (kmer_id, gcf_id), prob in zip(id_list, pvalues):
+        yield kmer_id, gcf_id, prob
+
+
+def load_bgc_kmer_associations(bgc_kmers_file):
+    associated_bgcs_by_kmer = {}
+    with open(bgc_kmers_file, 'r') as f:
+        for l in f:
+            strain_id, contig_id, bgc_id, bgc_start, bgc_end, kmer_id, kmer_start, kmer_end = l.strip().split()
+            if kmer_id not in associated_bgcs_by_kmer:
+                associated_bgcs_by_kmer[kmer_id] = set([])
+            associated_bgcs_by_kmer[kmer_id].add((strain_id, contig_id, bgc_id))
+
+    # If the same set of BGCs gets tagged by several kmers, only choose one of them
+    # This should probably be done intelligently!
+
+    kmer_assoc = []
+    bgc_assoc = []
+    for kmer_id, bgc_id_set in associated_bgcs_by_kmer.items():
+        bgc_ids = list(bgc_id_set)
+        bgc_ids.sort()
+        if bgc_ids not in bgc_assoc:
+            bgc_assoc.append(bgc_ids)
+            kmer_assoc.append(set([]))
+        idx = bgc_assoc.index(bgc_ids)
+        kmer_assoc[idx].add(kmer_id)
+
+    # Do the back translation, selecting a representative kmer where they tag identical things
+
+    associated_bgcs_by_kmer_filtered = {}
+    for bgc_ids, kmer_ids in zip(bgc_assoc, kmer_assoc):
+        kmer_ids = list(kmer_ids)
+        kmer_ids.sort()
+        kmer_id = kmer_ids[0]
+        associated_bgcs_by_kmer_filtered[kmer_id] = bgc_ids
+
+    return associated_bgcs_by_kmer_filtered
 
 
 # kmers_file = "/home/grimur/git/amr/example_data/strain_kmer_positions.tsv"
@@ -79,13 +125,7 @@ if __name__ == '__main__':
 
     contig_list = [x[1] for x in strain_contigs]
 
-    associated_bgcs_by_kmer = {}
-    with open(bgc_kmers_file, 'r') as f:
-        for l in f:
-            strain_id, contig_id, bgc_id, bgc_start, bgc_end, kmer_id, kmer_start, kmer_end = l.strip().split()
-            if (strain_id, contig_id, kmer_id) not in associated_bgcs_by_kmer:
-                associated_bgcs_by_kmer[(strain_id, contig_id, kmer_id)] = set([])
-            associated_bgcs_by_kmer[(strain_id, contig_id, kmer_id)].add(bgc_id)
+    associated_bgcs_by_kmer = load_bgc_kmer_associations(bgc_kmers_file)
 
     print("# kmer_id\tgcf_id\tp_val")
     for kmer_id, gcf_id, prob in process_family_file(gcf_file, associated_bgcs_by_kmer, contig_list):
