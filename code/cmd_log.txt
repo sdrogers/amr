@@ -1,0 +1,17 @@
+# Build a mapping btw strains and contigs, order by contig (for later join)
+cat ../example_data/strain_kmer_positions.tsv | awk '{print .}' | sort | uniq | cut -d. -f1,3 | sed s/./t/g | sort -k2 | uniq > ../example_data/strain_contig.tsv
+
+# Calculate correlation for products of different types - only list those with p > 0.0
+for i in NRPS PKSI PKS-NRP_Hybrids PKSother RiPPs Saccharides Terpene; do python hg_test.py -g ~/uist-data/tuberculosis/bigscape/20190621-bigscape-auto/network_files/2019-09-03_17-16-46_hybrids_auto//_clustering_c0.50.tsv -k ../example_data/strain_kmer_positions.tsv -c ../example_data/bgc_kmers.tsv -t 0.05; done | awk '!=0' | cut -f2 | sort | uniq -c
+
+# Extract all BGCs for a given family
+cat ~/uist-data/tuberculosis/bigscape/20190621-bigscape-auto/network_files/2019-09-03_17-16-46_hybrids_auto/*/*_clustering_c0.50.tsv | awk '$2==14653' | sort | uniq > ../example_data/single_tagged/gcf_14653_full.txt
+
+# List only the contigs contributing to a given family
+cut -d. -f1 ../example_data/single_tagged/gcf_14653_full.txt | sort | uniq > ../example_data/single_tagged/gcf_14653_contigs.txt
+
+# Resolve the contigs to strain IDs
+join ../example_data/single_tagged/gcf_14653_contigs.txt ../example_data/strain_contig.tsv -22 | sed s/\ /./g > ../example_data/single_tagged/gcf_14653_strains.txt
+
+# Join the strain- and contig IDs
+join ../example_data/single_tagged/gcf_21575_strains.txt ../example_data/single_tagged/gcf_21575_full.txt -t. > ../example_data/single_tagged/gcf_21575_bgcs.txt
